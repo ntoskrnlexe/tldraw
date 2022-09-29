@@ -1,0 +1,25 @@
+{
+  "name": "tldraw",
+  "scripts": {
+    "test": "jest",
+    "build": "tsc -p tsconfig.lib.json"
+  },
+  "nx": {
+    "namedInputs": {
+      "default": ["{projectRoot}/**/*"],
+      "prod": ["!{projectRoot}/**/*.spec.tsx"]
+    },
+    "targets": {
+      "build": {
+        "inputs": ["prod", "^prod"],
+        "outputs": ["dist/libs/tldraw"],
+        "dependsOn": ["^build"]
+      },
+      "test": {
+        "inputs": ["default", "^prod"],
+        "outputs": [],
+        "dependsOn": ["build"]
+      }
+    }
+  }
+}

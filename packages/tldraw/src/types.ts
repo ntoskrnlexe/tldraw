@@ -462,6 +462,7 @@ export enum FontStyle {
   Sans = 'sans',
   Serif = 'serif',
   Mono = 'mono',
+  Math = 'math'
 }
 
 export type ShapeStyles = {

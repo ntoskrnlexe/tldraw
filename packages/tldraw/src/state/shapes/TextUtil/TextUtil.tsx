@@ -1,10 +1,10 @@
-import { HTMLContainer, TLBounds, Utils } from '@tldraw/core'
-import { Vec } from '@tldraw/vec'
-import * as React from 'react'
-import { stopPropagation } from '~components/stopPropagation'
-import { BINDING_DISTANCE, GHOSTED_OPACITY, LETTER_SPACING } from '~constants'
-import { TLDR } from '~state/TLDR'
-import { TDShapeUtil } from '~state/shapes/TDShapeUtil'
+import { HTMLContainer, TLBounds, Utils } from '@tldraw/core';
+import { Vec } from '@tldraw/vec';
+import * as React from 'react';
+import { stopPropagation } from '~components/stopPropagation';
+import { BINDING_DISTANCE, GHOSTED_OPACITY, LETTER_SPACING } from '~constants';
+import { TLDR } from '~state/TLDR';
+import { TDShapeUtil } from '~state/shapes/TDShapeUtil';
 import {
   TextAreaUtils,
   defaultTextStyle,
@@ -14,25 +14,33 @@ import {
   getShapeStyle,
   getTextAlign,
   getTextSvgElement,
-} from '~state/shapes/shared'
-import { styled } from '~styles'
-import { AlignStyle, TDMeta, TDShapeType, TextShape, TransformInfo } from '~types'
+} from '~state/shapes/shared';
+import { styled } from '~styles';
+import {
+  AlignStyle,
+  FontStyle,
+  TDMeta,
+  TDShapeType,
+  TextShape,
+  TransformInfo,
+} from '~types';
+import { InlineMath } from 'react-katex';
 
-type T = TextShape
-type E = HTMLDivElement
+type T = TextShape;
+type E = HTMLDivElement;
 
 export class TextUtil extends TDShapeUtil<T, E> {
-  type = TDShapeType.Text as const
+  type = TDShapeType.Text as const;
 
-  isAspectRatioLocked = true
+  isAspectRatioLocked = true;
 
-  canEdit = true
+  canEdit = true;
 
-  canBind = true
+  canBind = true;
 
-  canClone = true
+  canClone = true;
 
-  bindingDistance = BINDING_DISTANCE / 2
+  bindingDistance = BINDING_DISTANCE / 2;
 
   getShape = (props: Partial<T>): T => {
     return Utils.deepMerge<T>(
@@ -48,186 +56,224 @@ export class TextUtil extends TDShapeUtil<T, E> {
         style: defaultTextStyle,
       },
       props
-    )
-  }
+    );
+  };
 
-  texts = new Map<string, string>()
+  texts = new Map<string, string>();
 
   Component = TDShapeUtil.Component<T, E, TDMeta>(
-    ({ shape, isBinding, isGhost, isEditing, onShapeBlur, onShapeChange, meta, events }, ref) => {
-      const { text, style } = shape
-      const styles = getShapeStyle(style, meta.isDarkMode)
-      const font = getFontStyle(shape.style)
-      const rInput = React.useRef<HTMLTextAreaElement>(null)
-      const rIsMounted = React.useRef(false)
+    (
+      {
+        shape,
+        isBinding,
+        isGhost,
+        isEditing,
+        onShapeBlur,
+        onShapeChange,
+        meta,
+        events,
+      },
+      ref
+    ) => {
+      const { text, style } = shape;
+      const styles = getShapeStyle(style, meta.isDarkMode);
+      const font = getFontStyle(shape.style);
+      const rInput = React.useRef<HTMLTextAreaElement>(null);
+      const rIsMounted = React.useRef(false);
 
-      const rEditedText = React.useRef(text)
+      const rEditedText = React.useRef(text);
 
       React.useLayoutEffect(() => {
         if (text !== rEditedText.current) {
-          let delta = [0, 0]
-          this.texts.set(shape.id, text)
-          const currentBounds = this.getBounds(shape)
-          const nextBounds = this.getBounds(shape)
+          let delta = [0, 0];
+          this.texts.set(shape.id, text);
+          const currentBounds = this.getBounds(shape);
+          const nextBounds = this.getBounds(shape);
           switch (shape.style.textAlign) {
             case AlignStyle.Start: {
-              break
+              break;
             }
             case AlignStyle.Middle: {
-              delta = Vec.div([nextBounds.width - currentBounds.width, 0], 2)
-              break
+              delta = Vec.div([nextBounds.width - currentBounds.width, 0], 2);
+              break;
             }
             case AlignStyle.End: {
-              delta = [nextBounds.width - currentBounds.width, 0]
-              break
+              delta = [nextBounds.width - currentBounds.width, 0];
+              break;
             }
           }
 
-          rEditedText.current = text
+          rEditedText.current = text;
+
+          if (!isEditing) {
+            setMath(text.includes('\\'));
+          }
 
           onShapeChange?.({
             ...shape,
             id: shape.id,
             point: Vec.sub(shape.point, delta),
             text,
-          })
+          });
         }
-      }, [text])
+      }, [text]);
 
       const handleChange = React.useCallback(
         (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-          let delta = [0, 0]
-          const newText = TLDR.normalizeText(e.currentTarget.value)
-          const currentBounds = this.getBounds(shape)
-          this.texts.set(shape.id, newText)
+          let delta = [0, 0];
+          const newText = TLDR.normalizeText(e.currentTarget.value);
+          const currentBounds = this.getBounds(shape);
+          this.texts.set(shape.id, newText);
           const nextBounds = this.getBounds({
             ...shape,
             text: newText,
-          })
+          });
 
           switch (shape.style.textAlign) {
             case AlignStyle.Start: {
-              break
+              break;
             }
             case AlignStyle.Middle: {
-              delta = Vec.div([nextBounds.width - currentBounds.width, 0], 2)
-              break
+              delta = Vec.div([nextBounds.width - currentBounds.width, 0], 2);
+              break;
             }
             case AlignStyle.End: {
-              delta = [nextBounds.width - currentBounds.width, 0]
-              break
+              delta = [nextBounds.width - currentBounds.width, 0];
+              break;
             }
           }
 
-          rEditedText.current = newText
+          rEditedText.current = newText;
 
           onShapeChange?.({
             ...shape,
             id: shape.id,
             point: Vec.sub(shape.point, delta),
             text: newText,
-          })
+          });
         },
         [shape.id, shape.point]
-      )
+      );
 
       const handleKeyDown = React.useCallback(
         (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
           if (e.key === 'Escape') {
-            e.preventDefault()
-            e.stopPropagation()
-            onShapeBlur?.()
-            return
+            e.preventDefault();
+            e.stopPropagation();
+            onShapeBlur?.();
+            return;
           }
 
           if (e.key === 'Tab' && shape.text.length === 0) {
-            e.preventDefault()
-            return
+            e.preventDefault();
+            return;
           }
 
           if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-            e.preventDefault()
-            e.stopPropagation()
-            rInput.current!.blur()
-            return
+            e.preventDefault();
+            e.stopPropagation();
+            rInput.current!.blur();
+            return;
           }
 
           if (!(e.key === 'Meta' || e.metaKey)) {
-            e.stopPropagation()
+            e.stopPropagation();
           } else if (e.key === 'z' && e.metaKey) {
             if (e.shiftKey) {
-              document.execCommand('redo', false)
+              document.execCommand('redo', false);
             } else {
-              document.execCommand('undo', false)
+              document.execCommand('undo', false);
             }
-            e.stopPropagation()
-            e.preventDefault()
-            return
+            e.stopPropagation();
+            e.preventDefault();
+            return;
           }
           if ((e.metaKey || e.ctrlKey) && e.key === '=') {
-            e.preventDefault()
+            e.preventDefault();
           }
           if (e.key === 'Tab') {
-            e.preventDefault()
+            e.preventDefault();
             if (e.shiftKey) {
-              TextAreaUtils.unindent(e.currentTarget)
+              TextAreaUtils.unindent(e.currentTarget);
             } else {
-              TextAreaUtils.indent(e.currentTarget)
+              TextAreaUtils.indent(e.currentTarget);
             }
 
-            onShapeChange?.({ ...shape, text: TLDR.normalizeText(e.currentTarget.value) })
+            onShapeChange?.({
+              ...shape,
+              text: TLDR.normalizeText(e.currentTarget.value),
+            });
           }
         },
         [shape, onShapeChange]
-      )
+      );
 
-      const handleBlur = React.useCallback((e: React.FocusEvent<HTMLTextAreaElement>) => {
-        e.currentTarget.setSelectionRange(0, 0)
-        onShapeBlur?.()
-      }, [])
+      const handleBlur = React.useCallback(
+        (e: React.FocusEvent<HTMLTextAreaElement>) => {
+          e.currentTarget.setSelectionRange(0, 0);
+          onShapeBlur?.();
+        },
+        []
+      );
 
       const handleFocus = React.useCallback(
         (e: React.FocusEvent<HTMLTextAreaElement>) => {
-          if (!isEditing) return
-          if (!rIsMounted.current) return
+          if (!isEditing) return;
+          if (!rIsMounted.current) return;
           if (document.activeElement === e.currentTarget) {
-            e.currentTarget.select()
+            e.currentTarget.select();
           }
+          setMath(false);
         },
         [isEditing]
-      )
+      );
 
       const handlePointerDown = React.useCallback(
         (e: React.PointerEvent<HTMLDivElement | HTMLTextAreaElement>) => {
           if (isEditing) {
-            e.stopPropagation()
+            e.stopPropagation();
           }
         },
         [isEditing]
-      )
+      );
 
       React.useEffect(() => {
         if (isEditing) {
-          this.texts.set(shape.id, text)
+          this.texts.set(shape.id, text);
           requestAnimationFrame(() => {
-            rIsMounted.current = true
-            const elm = rInput.current
+            rIsMounted.current = true;
+            const elm = rInput.current;
             if (elm) {
-              elm.focus()
-              elm.select()
+              elm.focus();
+              elm.select();
             }
-          })
+          });
         } else {
-          onShapeBlur?.()
+          onShapeBlur?.();
+          setMath(text.includes('\\'));
         }
-      }, [isEditing])
+      }, [isEditing]);
+
+      const [isMath, setMath] = React.useState(() => text.includes('\\'));
 
       return (
         <HTMLContainer ref={ref} {...events}>
-          <Wrapper isGhost={isGhost} isEditing={isEditing} onPointerDown={handlePointerDown}>
+          <Wrapper
+            isGhost={isGhost}
+            isEditing={isEditing}
+            onPointerDown={handlePointerDown}
+          >
             <InnerWrapper
+              css={{
+                fontSize:
+                  isMath &&
+                  `${
+                    getFontSize(shape.style.size, FontStyle.Math) *
+                    (shape.style.scale | 1)
+                  }px !important`,
+              }}
               style={{
-                font,
+                font: !isMath && font,
                 color: styles.stroke,
                 textAlign: getTextAlign(style.textAlign),
               }}
@@ -264,7 +310,7 @@ export class TextUtil extends TDShapeUtil<T, E> {
                   wrap="off"
                   dir="auto"
                   datatype="wysiwyg"
-                  defaultValue={text}
+                  defaultValue={!isMath ? text : String.raw`${text}`}
                   color={styles.stroke}
                   onFocus={handleFocus}
                   onChange={handleChange}
@@ -276,37 +322,39 @@ export class TextUtil extends TDShapeUtil<T, E> {
                   onPaste={stopPropagation}
                   onCut={stopPropagation}
                 />
-              ) : (
+              ) : !isMath ? (
                 text
+              ) : (
+                <InlineMath>{String.raw`${text}`}</InlineMath>
               )}
               &#8203;
             </InnerWrapper>
           </Wrapper>
         </HTMLContainer>
-      )
+      );
     }
-  )
+  );
 
   Indicator = TDShapeUtil.Indicator<T>(({ shape }) => {
-    const { width, height } = this.getBounds(shape)
-    return <rect x={0} y={0} width={width} height={height} />
-  })
+    const { width, height } = this.getBounds(shape);
+    return <rect x={0} y={0} width={width} height={height} />;
+  });
 
   getBounds = (shape: T) => {
     const bounds = Utils.getFromCache(this.boundsCache, shape, () => {
       if (!melm) {
         // We're in SSR
-        return { minX: 0, minY: 0, maxX: 10, maxY: 10, width: 10, height: 10 }
+        return { minX: 0, minY: 0, maxX: 10, maxY: 10, width: 10, height: 10 };
       }
 
-      if (!melm.parentNode) document.body.appendChild(melm)
+      if (!melm.parentNode) document.body.appendChild(melm);
 
-      melm.style.font = getFontStyle(shape.style)
-      melm.textContent = this.texts.get(shape.id) ?? shape.text
+      melm.style.font = getFontStyle(shape.style);
+      melm.textContent = this.texts.get(shape.id) ?? shape.text;
 
       // In tests, offsetWidth and offsetHeight will be 0
-      const width = melm.offsetWidth || 1
-      const height = melm.offsetHeight || 1
+      const width = melm.offsetWidth || 1;
+      const height = melm.offsetHeight || 1;
 
       return {
         minX: 0,
@@ -315,17 +363,19 @@ export class TextUtil extends TDShapeUtil<T, E> {
         maxY: height,
         width,
         height,
-      }
-    })
+      };
+    });
 
-    return Utils.translateBounds(bounds, shape.point)
-  }
+    return Utils.translateBounds(bounds, shape.point);
+  };
 
   shouldRender = (prev: T, next: T): boolean => {
     return (
-      next.text !== prev.text || next.style.scale !== prev.style.scale || next.style !== prev.style
-    )
-  }
+      next.text !== prev.text ||
+      next.style.scale !== prev.style.scale ||
+      next.style !== prev.style
+    );
+  };
 
   transform = (
     shape: T,
@@ -335,20 +385,22 @@ export class TextUtil extends TDShapeUtil<T, E> {
     const {
       rotation = 0,
       style: { scale = 1 },
-    } = initialShape
+    } = initialShape;
 
-    const nextScale = scale * Math.abs(Math.min(scaleX, scaleY))
+    const nextScale = scale * Math.abs(Math.min(scaleX, scaleY));
 
     return {
       point: [bounds.minX, bounds.minY],
       rotation:
-        (scaleX < 0 && scaleY >= 0) || (scaleY < 0 && scaleX >= 0) ? -(rotation || 0) : rotation,
+        (scaleX < 0 && scaleY >= 0) || (scaleY < 0 && scaleX >= 0)
+          ? -(rotation || 0)
+          : rotation,
       style: {
         ...initialShape.style,
         scale: nextScale,
       },
-    }
-  }
+    };
+  };
 
   transformSingle = (
     shape: T,
@@ -357,7 +409,7 @@ export class TextUtil extends TDShapeUtil<T, E> {
   ): Partial<T> | void => {
     const {
       style: { scale = 1 },
-    } = initialShape
+    } = initialShape;
 
     return {
       point: Vec.toFixed([bounds.minX, bounds.minY]),
@@ -365,11 +417,11 @@ export class TextUtil extends TDShapeUtil<T, E> {
         ...initialShape.style,
         scale: scale * Math.max(Math.abs(scaleY), Math.abs(scaleX)),
       },
-    }
-  }
+    };
+  };
 
   onDoubleClickBoundsHandle = (shape: T) => {
-    const center = this.getCenter(shape)
+    const center = this.getCenter(shape);
 
     const newCenter = this.getCenter({
       ...shape,
@@ -377,7 +429,7 @@ export class TextUtil extends TDShapeUtil<T, E> {
         ...shape.style,
         scale: 1,
       },
-    })
+    });
 
     return {
       style: {
@@ -385,16 +437,18 @@ export class TextUtil extends TDShapeUtil<T, E> {
         scale: 1,
       },
       point: Vec.toFixed(Vec.add(shape.point, Vec.sub(center, newCenter))),
-    }
-  }
+    };
+  };
 
   getSvgElement = (shape: T, isDarkMode: boolean): SVGElement | void => {
-    const bounds = this.getBounds(shape)
-    const style = getShapeStyle(shape.style, isDarkMode)
+    const bounds = this.getBounds(shape);
+    const style = getShapeStyle(shape.style, isDarkMode);
 
-    const fontSize = getFontSize(shape.style.size, shape.style.font) * (shape.style.scale ?? 1)
-    const fontFamily = getFontFace(shape.style.font).slice(1, -1)
-    const textAlign = shape.style.textAlign ?? AlignStyle.Start
+    const fontSize =
+      getFontSize(shape.style.size, shape.style.font) *
+      (shape.style.scale ?? 1);
+    const fontFamily = getFontFace(shape.style.font).slice(1, -1);
+    const textAlign = shape.style.textAlign ?? AlignStyle.Start;
 
     const textElm = getTextSvgElement(
       shape.text,
@@ -403,26 +457,26 @@ export class TextUtil extends TDShapeUtil<T, E> {
       textAlign,
       bounds.width,
       false
-    )
+    );
 
-    textElm.setAttribute('fill', style.stroke)
+    textElm.setAttribute('fill', style.stroke);
 
-    return textElm
-  }
+    return textElm;
+  };
 }
 
 /* -------------------------------------------------- */
 /*                       Helpers                      */
 /* -------------------------------------------------- */
 
-let melm: any
+let melm: any;
 
 function getMeasurementDiv() {
   // A div used for measurement
-  document.getElementById('__textMeasure')?.remove()
+  document.getElementById('__textMeasure')?.remove();
 
-  const pre = document.createElement('pre')
-  pre.id = '__textMeasure'
+  const pre = document.createElement('pre');
+  pre.id = '__textMeasure';
 
   Object.assign(pre.style, {
     whiteSpace: 'pre',
@@ -440,16 +494,16 @@ function getMeasurementDiv() {
     userSelect: 'none',
     alignmentBaseline: 'mathematical',
     dominantBaseline: 'mathematical',
-  })
+  });
 
-  pre.tabIndex = -1
+  pre.tabIndex = -1;
 
-  document.body.appendChild(pre)
-  return pre
+  document.body.appendChild(pre);
+  return pre;
 }
 
 if (typeof window !== 'undefined') {
-  melm = getMeasurementDiv()
+  melm = getMeasurementDiv();
 }
 
 const Wrapper = styled('div', {
@@ -471,12 +525,12 @@ const Wrapper = styled('div', {
       },
     },
   },
-})
+});
 
 const commonTextWrapping = {
   whiteSpace: 'pre-wrap',
   overflowWrap: 'break-word',
-}
+};
 
 const InnerWrapper = styled('div', {
   position: 'absolute',
@@ -505,7 +559,7 @@ const InnerWrapper = styled('div', {
     },
   },
   ...commonTextWrapping,
-})
+});
 
 const TextArea = styled('textarea', {
   position: 'absolute',
@@ -536,4 +590,4 @@ const TextArea = styled('textarea', {
     outline: 'none',
     border: 'none',
   },
-})
+});
